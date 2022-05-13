@@ -59,6 +59,8 @@ def get_list_from_labels_v1(roles, label_to_int_dict):
         else:
             y.append(0)
     return y
+
+
 def get_labels_from_ctx_v1(ne, contexts, label_to_int_dict, model, combined):
     int_to_label_dict = dict([(value, key) for key, value in label_to_int_dict.items()])
     probs = []
@@ -67,9 +69,9 @@ def get_labels_from_ctx_v1(ne, contexts, label_to_int_dict, model, combined):
     ip = []
     for ctx in contexts:
         ip.append(ne + "[SEP]" + ctx)
-    if combined == 1:
-        ip = []
-        ip.append(ne + "[SEP]" + ". ".join(contexts))
+#     if combined == 2:
+    ip_mp = ["&*&*".join(ip)]
+    ip = ip_mp
     with torch.no_grad():
         p = model(ip)
 #     print(np.array(p))
@@ -77,13 +79,10 @@ def get_labels_from_ctx_v1(ne, contexts, label_to_int_dict, model, combined):
     i_max = (torch.argmax(a))
     model_probs = [0 for _ in range(len(a))]
     model_probs[i_max]  = 1
-    print(model_probs)
     return model_probs
-
 
 def evaluate_post_v1(path, label_to_int_dict, model, combined, removed=[]):
     nes, ctx, roles, sl, fl = generate_training_examples(pd.read_excel(path, index_col = 0, na_filter = None), path)
-    nes, ctx, roles, sl, fl = combine_varients(nes, ctx, roles, sl, fl, combined)
     roles = correct_roles(roles)
     yhat = []
     ytest = []

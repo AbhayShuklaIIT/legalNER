@@ -82,11 +82,15 @@ class BertClassifier(nn.Module):
         self.device = device
 
     def forward(self, text):
-        encodings = self.tokenizer(text,padding='max_length', max_length = 512, truncation=True, return_tensors="pt")
-        encodings = encodings.to(self.device)
-        result, _ = self.bert(input_ids= encodings["input_ids"], attention_mask=encodings["attention_mask"],return_dict=False)
-
-        concat = result[:,0,:]
+        concat = torch.empty(0, 768)
+        for i in text:
+            encodings_i = self.tokenizer(i.split("&*&*"),padding='max_length', max_length = 512, truncation=True, return_tensors="pt")
+            encodings_i = encodings_i.to(self.device)
+            result, _ = self.bert(input_ids= encodings_i["input_ids"], attention_mask=encodings_i["attention_mask"],return_dict=False)
+            result = result[:,0,:]
+            result = torch.mean(result, 0)
+            result = result.unsqueeze(0)
+            concat = torch.cat((concat, result), 0)
         linear_output = self.linear(concat)
         final_layer = self.FL(linear_output)
         return final_layer
@@ -104,7 +108,7 @@ def get_optimizer(model):
     pretrained_names = [f'bert.{k}' for (k, v) in model.bert.named_parameters()]
     new_params= [v for k, v in model.named_parameters() if k not in pretrained_names]
     optimizer = AdamW(
-        [{'params': pretrained, 'lr' : 1e-5}, {'params': new_params, 'lr': 0.0001}]
+        [{'params': pretrained, 'lr' : 1e-5}, {'params': new_params, 'lr': 0.001}]
     )
     return optimizer
 
@@ -139,24 +143,24 @@ def train_model(data_path,save_model_name, epochs,use_cuda = 0, batch_size = 16)
 
             for train_input, train_label in tqdm(train_dataloader):
                 train_label = train_label.to(device)
-                try:
-                    output = model(train_input)
-                # except Exception as e:
-                #     print(e)
-                
-                    train_label = train_label.to(torch.float)
-                    batch_loss = criterion(output, train_label)
-                    total_loss_train += batch_loss.item()
-                    
-                    acc = (torch.argmax(output, dim = 1) == torch.argmax(train_label, dim = 1)).sum().item()
-                    total_acc_train += acc
+#                 try:
+                output = model(train_input)
+            # except Exception as e:
+            #     print(e)
 
-                    model.zero_grad()
-                # try:
-                    batch_loss.backward()
-                    optimizer.step()
-                except Exception as e:
-                    print(e)
+                train_label = train_label.to(torch.float)
+                batch_loss = criterion(output, train_label)
+                total_loss_train += batch_loss.item()
+
+                acc = (torch.argmax(output, dim = 1) == torch.argmax(train_label, dim = 1)).sum().item()
+                total_acc_train += acc
+
+                model.zero_grad()
+            # try:
+                batch_loss.backward()
+                optimizer.step()
+#                 except Exception as e:
+#                     print(e)
                 # break
             total_acc_val = 0
             total_loss_val = 0

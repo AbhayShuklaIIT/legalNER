@@ -45,9 +45,11 @@ def get_x_y_per_doc(NEs, contexts, roles, label_to_int_dict):
         if sum(y_ex) == 0:
                 # print("SUM Y is 0", ne, role)
                 continue
+        x_i = []
         for c in context:
-            x.append(get_x_c_s(ne,c))
-            y_f.append(y_ex) 
+            x_i.append(get_x_c_s(ne,c))
+        x.append("&*&*".join(x_i))
+        y_f.append(y_ex) 
     return x, y_f
 
 def get_x_y(label_to_int_dict, test_req = 1, combine_ctx = 0):
@@ -62,11 +64,13 @@ def get_x_y(label_to_int_dict, test_req = 1, combine_ctx = 0):
     
     return (x), (y_f), (x_test), (y_f_test), label_to_int_dict
 
-def gen_training_data_cls(train_file ,test_req = 0, combine_ctx = 0):
+def gen_training_data_max_pooling(train_file ,test_req = 0, combine_ctx = 0):
     print("Combined", combine_ctx)
     label_to_int_dict = get_label_to_int_dict()
     print("Label to int dict", label_to_int_dict)
-    x_train, y_train, x_test, y_test, label_to_int_dict = get_x_y(label_to_int_dict, test_req = test_req, combine_ctx = combine_ctx)
+    if combine_ctx == 2:
+        combine_ctx = 0
+    x_train, y_train, x_test, y_test, label_to_int_dict = get_x_y(label_to_int_dict, test_req = test_req, combine_ctx = 0)
     df_dict = {"x_train" : x_train, "y_train" : y_train}
     df = pd.DataFrame.from_dict(df_dict)
     print("Saving data to " + train_file + ".pkl")
